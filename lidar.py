@@ -10,25 +10,36 @@ import graphics_util
 
 
 class AppState:
-
     def __init__(self, *args, **kwargs):
+
+        # user settable variables
+        self.sesor_height = 0.5 # sensor height off the floor, meters
+        self.distance = 3.0 # center of rotation from camera, meters
+        self.spin_speed = 0.25 # view rotation speed, degrees-per-frame
+        self.ui_window_width = 1000 # window width when not in fullscreen, pixels
+        self.ui_window_height = 600 # widow height when not in fullscreen, pixels
+        self.ui_fullscreen = True # enable auto-fullscreen on start
+        self.ui_fontsize = 18 # font size of onscreen text
+
+        # sensor config
+        self.sensor_alternate_ir = 1 # apply gamma curve to IR video stream, 0,1
+        self.sensor_laser_power = 100 # laser power in percent, 0-100
+        self.sensor_confidence_threshold = 2 # threshold to consider depth data good, 0-3
+        self.sensor_min_distance = 0 # minimum depth sensing distance, mm, def=490mm
+        self.sensor_noise_filtering = 4 # apply noise filtering to depth data, 1-6 def=4
+        self.sensor_invalidation_bypass = 0 # 1=show invalid lidar points, 0,1
+
+        # system variables
+        self.imu_sample_window = 5 # number of IMU samples to average for noise reduction
+        self.capture_fps = 30 # Lidar data capture speed
+        self.gl_config = gl.Config(double_buffer=True, samples=8) # open GL config
+
+        # modified during runtime
         self.camera_pitch = 0
         self.camera_yaw = 0
         self.sensor_pitch = 0
         self.sensor_roll = 0
-        self.sesor_height = 0.5
-        self.distance = 3.0 # center of rotation from camera, meters
         self.translation = np.array([0, 0.5, 0], np.float32)
-        self.spin_speed = 0.25
-        self.capture_fps = 30
-        self.gl_config = gl.Config(double_buffer=True, samples=8)
-        
-        self.ui_window_width = 1000
-        self.ui_window_height = 600
-        self.ui_fullscreen = True
-        self.ui_fontsize = 18
-
-        self.imu_sample_window = 5
         self.imu_samples = np.array([[0.0,-9.8, 0.0]]*self.imu_sample_window, np.float32)
         self.imu_average = (0.0,-9.8, 0.0)
 
@@ -55,14 +66,13 @@ def main():
 
     # sensor settings
     depth_sensor = lidar_util.get_depth_sensor(pipeline)
-    depth_sensor.set_option(rs.option.alternate_ir, 1) # 0,1
-    depth_sensor.set_option(rs.option.laser_power, 100) #0-100
-    depth_sensor.set_option(rs.option.confidence_threshold, 2) #0-3
-    depth_sensor.set_option(rs.option.min_distance, 0) #490 (mm)
-    depth_sensor.set_option(rs.option.noise_filtering, 4) #1-6, 4 default
-    depth_sensor.set_option(rs.option.invalidation_bypass, 0) #0,1
+    depth_sensor.set_option(rs.option.alternate_ir, state.sensor_alternate_ir)
+    depth_sensor.set_option(rs.option.laser_power, state.sensor_laser_power)
+    depth_sensor.set_option(rs.option.confidence_threshold, state.sensor_confidence_threshold)
+    depth_sensor.set_option(rs.option.min_distance, state.sensor_min_distance)
+    depth_sensor.set_option(rs.option.noise_filtering, state.sensor_noise_filtering)
+    depth_sensor.set_option(rs.option.invalidation_bypass, state.sensor_invalidation_bypass)
 
-    
     config = lidar_util.get_config(pipeline)
     config.enable_stream(rs.stream.depth, rs.format.z16, state.capture_fps)
     config.enable_stream(rs.stream.color, rs.format.rgb8, state.capture_fps)
@@ -70,26 +80,21 @@ def main():
     config.enable_stream(rs.stream.confidence, rs.format.raw8, state.capture_fps)
     config.enable_stream(rs.stream.accel)
 
-
-
     pipeline.start(config)
 
     depth_intrinsics = lidar_util.get_stream_intrinsics(pipeline, rs.stream.depth)
     depth_w, depth_h = depth_intrinsics.width, depth_intrinsics.height
 
-
     vertex_list = pyglet.graphics.vertex_list(depth_w * depth_h, 'v3f/stream', 't2f/stream')
     
     colorizer = rs.colorizer()
     colorizer.set_option(rs.option.visual_preset, 0) # 0=Dynamic, 1=Fixed, 2=Near, 3=Far
-    #colorizer.set_option(rs.option.min_distance, 0)
-    #colorizer.set_option(rs.option.max_distance, 4)
     
     pc = rs.pointcloud()
     filters = [rs.disparity_transform(),
                rs.spatial_filter(),
                rs.temporal_filter(),
-               #rs.hole_filling_filter(),
+               #rs.hole_filling_filter(), # can cause visual artifacts on sparse point clouds.
                rs.disparity_transform(False)]
 
     color_image, color_fmt = lidar_util.image_from_stream(pipeline, rs.stream.color)
@@ -132,7 +137,7 @@ def main():
         gl.glTranslatef(0, 0, state.distance)
         gl.glRotated(state.camera_pitch, 1, 0, 0)
         gl.glRotated(state.camera_yaw, 0, 1, 0)
-        #graphics_util.axes(0.1, 4) # camera center axes
+        #graphics_util.axes(0.1, 4) # camera center axes, useful for debugging
         gl.glTranslatef(*state.translation)
         graphics_util.grid(5, 50)
         gl.glTranslatef(0, 0, -state.distance)
@@ -157,7 +162,7 @@ def main():
         # frustum
         gl.glColor3f(0.25, 0.25, 0.25)
         graphics_util.frustum(depth_intrinsics)
-        #graphics_util.axes(0.1)
+        #graphics_util.axes(0.1)    # camera axes, useful for debugging
         
         gl.glPopMatrix()
     
@@ -212,7 +217,6 @@ def main():
         confidence_array = np.asanyarray(confidence_frame.get_data())
         confidence_image.set_data(confidence_fmt, confidence_array.strides[0], confidence_array.ctypes.data)
 
-
         # point cloud  
         points = pc.calculate(depth_frame)
     
@@ -228,9 +232,7 @@ def main():
         graphics_util.copy(vertex_list.vertices, verts)
         graphics_util.copy(vertex_list.tex_coords, texcoords)
         
-
     pyglet.clock.schedule(get_sensor_data)
-
 
     try:
         pyglet.app.run()

@@ -17,6 +17,7 @@ def convert_fmt(fmt):
 
 
 def get_config(pipeline):
+    """Gets the sensor config"""
     config = rs.config()
     pipeline_wrapper = rs.pipeline_wrapper(pipeline)
     pipeline_profile = config.resolve(pipeline_wrapper)
@@ -53,6 +54,7 @@ def get_converted_steam_fmt(pipeline, stream):
     native_fmt = get_stream_profile(pipeline, stream).format()
     return convert_fmt(native_fmt)
 
+
 def image_from_stream(pipeline, stream):
     intrinsics = get_stream_intrinsics(pipeline, stream)
     w, h = intrinsics.width, intrinsics.height
@@ -60,4 +62,4 @@ def image_from_stream(pipeline, stream):
     fmt = get_converted_steam_fmt(pipeline, stream)
     image = pyglet.image.ImageData(w, h, fmt, empty_image)
     return image, fmt
-
+    

@@ -77,6 +77,7 @@ def copy(dst, src):
 
 
 def draw_image(image, x=0, y=0, w=100, h=100):
+    """Draws an image to the screen"""
     gl.glColor3f(1, 1, 1)
     texture = image.get_texture()   
     gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)                                                                                                                               
@@ -86,6 +87,7 @@ def draw_image(image, x=0, y=0, w=100, h=100):
 
 
 def draw_text(fontsize, margin, height, video_width):
+    """Draws all UI text.  Batch draws are more efficient."""
     batch = pyglet.graphics.Batch()
 
     font = 'Verdana'
@@ -133,3 +135,4 @@ def draw_text(fontsize, margin, height, video_width):
                       batch = batch)
 
     batch.draw()
+    
