@@ -4,19 +4,19 @@ Uses Intel Realsense Lidar L515 sensor
 
 
 ## Python Dependencies
-- pyrealsense2  2.50.0.3812  
+- pyrealsense2  2.50.0.3812 
 - pyglet        1.5.21
 - numpy         1.22.1
 
 
 ## On the exhibit linux computer
 Lidar program is stored in:
-    /home/msclidar/Documents/lidar/lidar.py
+    /home/msclidar/Documents/exhibit-lidar/lidar.py
 
 The terminal command to run it is:
-    python3 /home/msclidar/Documents/lidar/lidar.py
+    python3 /home/msclidar/Documents/exhibit-lidar/lidar.py
 
-The program is set to auto-start.  In the "Activities" menu search for "startup applications" and in that window you will see and entry set to run this above command.
+The program is set to auto-start.  In the "Activities" menu search for "startup applications" and in that window you will see and entry set to run a shell script.  This script will run the lidar program, and try a few time if it fails.
 
 The desktop RS icon just runs the above terminal command.
 
