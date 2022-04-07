@@ -20,6 +20,7 @@ class AppState:
         self.ui_window_height = 600 # widow height when not in fullscreen, pixels
         self.ui_fullscreen = True # enable auto-fullscreen on start
         self.ui_fontsize = 18 # font size of onscreen text
+        self.ui_pointsize = 1 # size of points in pointcloud
 
         # sensor config
         self.sensor_alternate_ir = 1 # apply gamma curve to IR video stream, 0,1
@@ -149,7 +150,7 @@ def main():
         gl.glRotated(state.sensor_roll, 0, 0, 1)
 
         # points
-        gl.glPointSize(1)
+        gl.glPointSize(state.ui_pointsize)
         gl.glColor3f(1, 1, 1)
         gl.glTexParameteri(
         gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)
