@@ -15,7 +15,7 @@ class AppState:
         # user settable variables
         self.sesor_height = 0.5 # sensor height off the floor, meters
         self.distance = 3.0 # center of rotation from camera, meters
-        self.spin_speed = 0.20 # view rotation speed, degrees-per-frame
+        self.spin_speed = 0.10 # view rotation speed, degrees-per-frame
         self.base_yaw = 0 # degrees to offset the camera rotation
         self.spin_range = 30 # degrees over which to sweep the camera rotation
         self.ui_window_width = 1000 # window width when not in fullscreen, pixels
