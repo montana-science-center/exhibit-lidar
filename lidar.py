@@ -15,12 +15,15 @@ class AppState:
         # user settable variables
         self.sesor_height = 0.5 # sensor height off the floor, meters
         self.distance = 3.0 # center of rotation from camera, meters
-        self.spin_speed = 0.25 # view rotation speed, degrees-per-frame
+        self.spin_speed = 0.20 # view rotation speed, degrees-per-frame
+        self.base_yaw = 0 # degrees to offset the camera rotation
+        self.spin_range = 30 # degrees over which to sweep the camera rotation
         self.ui_window_width = 1000 # window width when not in fullscreen, pixels
         self.ui_window_height = 600 # widow height when not in fullscreen, pixels
         self.ui_fullscreen = True # enable auto-fullscreen on start
         self.ui_fontsize = 18 # font size of onscreen text
         self.ui_pointsize = 1 # size of points in pointcloud
+        self.scale_point_cloud = [-1, 1, 1]
 
         # sensor config
         self.sensor_alternate_ir = 1 # apply gamma curve to IR video stream, 0,1
@@ -44,6 +47,11 @@ class AppState:
         self.imu_samples = np.array([[0.0,-9.8, 0.0]]*self.imu_sample_window, np.float32)
         self.imu_average = (0.0,-9.8, 0.0)
 
+    def update_camera_yaw(self, sweep_half_angle):
+        if (self.camera_yaw > sweep_half_angle or self.camera_yaw < -sweep_half_angle):
+            self.spin_speed *= -1
+        return self.camera_yaw + self.spin_speed
+
     def update_imu(self, new_vector):
         # rolling average for imu samples
         self.imu_samples = np.roll(self.imu_samples, 1, 0)
@@ -56,7 +64,7 @@ class AppState:
         z = self.imu_average[2]
         self.sensor_pitch = math.atan2(y, z) * 180/math.pi + 90
         self.sensor_roll = math.atan2(-x, math.sqrt(y*y + z*z)) * 180/math.pi
-        self.camera_yaw -= self.spin_speed
+        self.camera_yaw = self.update_camera_yaw(self.spin_range)
 
 
 
@@ -103,7 +111,6 @@ def main():
     depth_image, depth_fmt = lidar_util.image_from_stream(pipeline, rs.stream.depth)
     confidence_image, confidence_fmt = lidar_util.image_from_stream(pipeline, rs.stream.confidence)
 
-
     @window.event
     def on_draw():
         window.clear()
@@ -137,7 +144,7 @@ def main():
         gl.gluLookAt(0, 0, 0, 0, 0, 1, 0, -1, 0)
         gl.glTranslatef(0, 0, state.distance)
         gl.glRotated(state.camera_pitch, 1, 0, 0)
-        gl.glRotated(state.camera_yaw, 0, 1, 0)
+        gl.glRotated(state.camera_yaw + state.base_yaw, 0, 1, 0)
         #graphics_util.axes(0.1, 4) # camera center axes, useful for debugging
         gl.glTranslatef(*state.translation)
         graphics_util.grid(5, 50)
@@ -222,6 +229,8 @@ def main():
         points = pc.calculate(depth_frame)
     
         verts = np.asarray(points.get_vertices(2)).reshape(depth_h, depth_w, 3)
+        orient = np.array(state.scale_point_cloud)
+        verts = verts * orient
         texcoords = np.asarray(points.get_texture_coordinates(2))
     
         if len(vertex_list.vertices) != verts.size:

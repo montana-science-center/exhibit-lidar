@@ -81,9 +81,9 @@ def draw_image(image, x=0, y=0, w=100, h=100):
     gl.glColor3f(1, 1, 1)
     texture = image.get_texture()   
     gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)                                                                                                                               
-    texture.width = w                                                                                                                                                                  
+    texture.width = -w                                                                                                                                                                  
     texture.height = h                                                                                                                                                                                                                                                                                                                       
-    texture.blit(x, y)
+    texture.blit(x + w, y)
 
 
 def draw_text(fontsize, margin, height, video_width):
